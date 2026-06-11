@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agente REINF – IFPI Campus São João</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --verde: #1B5E20;
+    --verde-medio: #2E7D32;
+    --verde-claro: #A5D6A7;
+    --verde-bg: #E8F5E9;
+    --amarelo: #F9A825;
+    --vermelho: #C62828;
+    --vermelho-bg: #FFEBEE;
+    --cinza-bg: #F5F5F0;
+    --cinza-borda: #DDDDD8;
+    --texto: #1A1A18;
+    --texto-muted: #666660;
+    --branco: #FAFAF8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--cinza-bg);
+    color: var(--texto);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--verde);
+    color: #fff;
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 4px solid var(--amarelo);
+  }
+  .header-left h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; }
+  .header-left p  { font-size: 0.75rem; opacity: 0.75; margin-top: 2px; font-family: 'IBM Plex Mono', monospace; }
+  .header-badge {
+    background: var(--amarelo);
+    color: #1A1A18;
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 4px 12px;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  main { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  #sec-upload { display: block; }
+  #sec-result { display: none; }
+
+  .upload-card {
+    background: var(--branco);
+    border: 1px solid var(--cinza-borda);
+    border-radius: 4px;
+    padding: 3rem 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .drop-zone {
+    border: 2px dashed var(--verde-claro);
+    border-radius: 4px;
+    padding: 3rem 2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--verde-bg);
+    text-align: center;
+  }
+  .drop-zone:hover, .drop-zone.over { border-color: var(--verde-medio); background: #C8E6C9; }
+  .drop-icon { font-size: 3rem; margin-bottom: 1rem; display: block; }
+  .drop-zone h2 { font-size: 1.1rem; font-weight: 500; color: var(--verde); margin-bottom: 0.5rem; }
+  .drop-zone p  { font-size: 0.85rem; color: var(--texto-muted); font-family: 'IBM Plex Mono', monospace; }
+
+  .instrucoes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 2rem; }
+  .inst-item { background: var(--cinza-bg); border: 1px solid var(--cinza-borda); border-radius: 4px; padding: 1rem; }
+  .inst-num  { font-family: 'IBM Plex Mono', monospace; font-size: 1.5rem; font-weight: 500; color: var(--verde-claro); margin-bottom: 0.5rem; }
+  .inst-item h3 { font-size: 0.875rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .inst-item p  { font-size: 0.8rem; color: var(--texto-muted); line-height: 1.5; }
+
+  #status-bar {
+    display: none;
+    padding: 0.875rem 1.25rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    margin-bottom: 1.25rem;
+    font-family: 'IBM Plex Mono', monospace;
+    border-left: 4px solid transparent;
+  }
+  #status-bar.info { background: #E3F2FD; border-color: #1565C0; color: #0D47A1; display: block; }
+  #status-bar.ok   { background: var(--verde-bg); border-color: var(--verde-medio); color: var(--verde); display: block; }
+  #status-bar.err  { background: var(--vermelho-bg); border-color: var(--vermelho); color: var(--vermelho); display: block; }
+
+  .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  .card-resumo {
+    background: var(--branco);
+    border: 1px solid var(--cinza-borda);
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    border-top: 3px solid var(--verde);
+  }
+  .card-resumo .lbl { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 6px; }
+  .card-resumo .val { font-size: 1.5rem; font-weight: 600; color: var(--texto); line-height: 1.2; }
+  .card-resumo .sub { font-size: 0.72rem; color: var(--texto-muted); margin-top: 4px; font-family: 'IBM Plex Mono', monospace; }
+  .card-resumo.warn { border-top-color: var(--amarelo); }
+  .card-resumo.warn .val { color: #E65100; }
+
+  .tbl-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 0.75rem; }
+  .tbl-header h2 { font-size: 1rem; font-weight: 600; }
+  .tbl-header p  { font-size: 0.8rem; color: var(--texto-muted); }
+
+  .tbl-wrap { background: var(--branco); border: 1px solid var(--cinza-borda); border-radius: 4px; overflow-x: auto; margin-bottom: 1.5rem; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  thead tr { background: var(--verde); }
+  thead th {
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 500;
+    font-size: 0.72rem;
+    color: #fff;
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid var(--cinza-borda); transition: background 0.1s; }
+  tbody tr:hover { background: var(--verde-bg); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody td { padding: 10px 12px; vertical-align: top; }
+  tbody tr.warn-row { background: #FFFDE7; }
+  tbody tr.warn-row:hover { background: #FFF9C4; }
+
+  .cnpj-cell  { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; }
+  .nat-cell   { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 500; }
+  .money-cell { font-family: 'IBM Plex Mono', monospace; text-align: right; font-size: 0.78rem; white-space: nowrap; }
+  .obs-text   { font-size: 0.75rem; line-height: 1.55; color: var(--texto); word-break: break-word; }
+  .obs-meta   { font-size: 0.68rem; color: var(--texto-muted); margin-top: 5px; font-family: 'IBM Plex Mono', monospace; word-break: break-word; }
+  .char-bar   { height: 3px; background: var(--cinza-borda); border-radius: 9999px; margin-top: 5px; overflow: hidden; }
+  .char-fill  { height: 100%; background: var(--verde-medio); border-radius: 9999px; }
+  .char-fill.over { background: var(--amarelo); }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 0.68rem; font-weight: 600; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.05em; }
+  .badge-ok   { background: var(--verde-bg);  color: var(--verde);  border: 1px solid var(--verde-claro); }
+  .badge-warn { background: #FFF9C4; color: #E65100; border: 1px solid #FFE082; }
+
+  .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 2rem; }
+  button {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+  .btn-primary   { background: var(--verde); color: #fff; border-color: var(--verde); }
+  .btn-primary:hover { background: var(--verde-medio); }
+  .btn-secondary { background: transparent; color: var(--texto); border-color: var(--cinza-borda); }
+  .btn-secondary:hover { background: var(--cinza-bg); }
+
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  footer { text-align: center; padding: 2rem; font-size: 0.75rem; color: var(--texto-muted); font-family: 'IBM Plex Mono', monospace; border-top: 1px solid var(--cinza-borda); margin-top: 2rem; }
+
+  @media (max-width: 700px) {
+    .cards-grid { grid-template-columns: repeat(2, 1fr); }
+    .instrucoes { grid-template-columns: 1fr; }
+    header { flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Agente REINF — Processador de Deduções</h1>
+    <p>IFPI · Campus São João do Piauí · DDF025 / SIAFI-Web</p>
+  </div>
+  <span class="header-badge">EFD-REINF</span>
+</header>
+
+<main>
+  <div id="status-bar"></div>
+
+  <div id="sec-upload">
+    <div class="upload-card">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <span class="drop-icon">📂</span>
+        <h2>Arraste a planilha SIAFI aqui ou clique para selecionar</h2>
+        <p>Arquivo .xlsx — Extração DDF025 do mês de referência</p>
+      </div>
+      <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none">
+
+      <div class="instrucoes">
+        <div class="inst-item">
+          <div class="inst-num">01</div>
+          <h3>Selecione o arquivo</h3>
+          <p>Clique na área acima e escolha a planilha .xlsx recebida do órgão superior referente ao mês.</p>
+        </div>
+        <div class="inst-item">
+          <div class="inst-num">02</div>
+          <h3>Processamento automático</h3>
+          <p>O agente agrupa por CNPJ, soma as bases de cálculo e retenções, e monta as observações corretamente.</p>
+        </div>
+        <div class="inst-item">
+          <div class="inst-num">03</div>
+          <h3>Copie e lance no REINF</h3>
+          <p>Use os dados da tabela para preencher o sistema. Baixe o arquivo .xlsx processado para guardar o registro.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sec-result">
+    <div class="cards-grid" id="cards-grid"></div>
+    <div class="tbl-header">
+      <div>
+        <h2>Dados prontos para lançamento no REINF</h2>
+        <p id="tbl-sub"></p>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:13%">CNPJ</th>
+            <th style="width:7%">Natureza</th>
+            <th style="width:9%">Fato Gerador</th>
+            <th style="width:10%">Valor Bruto</th>
+            <th style="width:10%">Retenção</th>
+            <th style="width:38%">Observação REINF (máx. 200 chars)</th>
+            <th style="width:6%">Chars</th>
+            <th style="width:7%">Status</th>
+          </tr>
+        </thead>
+        <tbody id="result-body"></tbody>
+      </table>
+    </div>
+    <div class="actions">
+      <button class="btn-primary" onclick="downloadResult()">⬇ Baixar planilha processada (.xlsx)</button>
+      <button class="btn-secondary" onclick="resetApp()">↩ Nova planilha</button>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Agente REINF · IFPI Campus São João do Piauí · Uso interno · v2.0
+</footer>
+
+<script>
+const dropZone  = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const statusEl  = document.getElementById('status-bar');
+let processedData = [];
+let originalData  = [];
+let mesRef = '';
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('over'); handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+function setStatus(msg, type) {
+  statusEl.className = type;
+  statusEl.style.display = 'block';
+  statusEl.innerHTML = msg;
+}
+
+function fmtMoeda(n) {
+  return 'R$ ' + Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function maskCNPJ(c) {
+  if (!c || c.length !== 14) return c;
+  return c.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+}
+
+function normCNPJ(c) {
+  if (!c) return null;
+  let s = String(c).replace(/\D/g, '').padStart(14, '0');
+  return (s.length === 14 && s.replace(/0/g, '') !== '') ? s : null;
+}
+
+// ─── EXTRAÇÃO DE NF ─────────────────────────────────────────────────────────
+// Captura números como "885", "5696", "5.164" (com ponto de milhar → remove ponto)
+function extractNF(obs) {
+  if (!obs) return [];
+  const matches = [...obs.matchAll(/NF\s*[NnºÃo°]+\.?\s*([\d][\d.]*\d|\d+)/gi)];
+  return matches.map(m => m[1].replace(/\./g, ''));
+}
+
+// ─── EXTRAÇÃO DE DESCRIÇÃO DO SERVIÇO ───────────────────────────────────────
+function extractRef(obs) {
+  if (!obs) return '';
+  const m = obs.match(/REF[.\s]+[ÀA]\s+(.+?)(?:\s*,\s*NO\s+M[ÊE]S|\s*-\s*NO\s+IFPI|\s*-\s*CONF|$)/i);
+  return m ? m[1].trim() : '';
+}
+
+// ─── EXTRAÇÃO DE LOCAL ───────────────────────────────────────────────────────
+function extractLocal(obs) {
+  if (!obs) return 'NO IFPI-CAMPUS SÃO JOÃO/PI';
+  const m = obs.match(/(NO\s+IFPI[^\-\n,]+)/i);
+  return m ? m[1].trim() : 'NO IFPI-CAMPUS SÃO JOÃO/PI';
+}
+
+// ─── MONTAGEM DA OBSERVAÇÃO ──────────────────────────────────────────────────
+// Estratégia em cascata: tenta manter tudo, encurta progressivamente se > 200 chars.
+// Nunca mistura dados entre CNPJs.
+function buildObs(rowsData) {
+  const nfs    = [];
+  const nps    = [];
+  const refs   = [];
+  const locals = [];
+
+  rowsData.forEach(r => {
+    const nfList = extractNF(r.obs);
+    nfList.forEach(n => nfs.push(n));
+    nps.push('NP' + r.np);
+    const ref = extractRef(r.obs);
+    if (ref && !refs.includes(ref)) refs.push(ref);
+    const loc = extractLocal(r.obs);
+    if (loc && !locals.includes(loc)) locals.push(loc);
+  });
+
+  const refStr   = refs[0]   || '';
+  const localStr = locals[0] || 'NO IFPI-CAMPUS SÃO JOÃO/PI';
+  const nfFull   = nfs.map(n => 'Nº ' + n).join(', ');
+  const npFull   = nps.join(' e ');
+
+  // Tentativa 1 — completo
+  let obs = `RET TRIB FED CONF IN 1234/2012 DA NF ${nfFull} - REF À ${refStr} - ${localStr} - ${npFull}`;
+  if (obs.length <= 200) return { obs, len: obs.length, truncated: false };
+
+  // Tentativa 2 — encurtar descrição do serviço
+  const refShort = refStr.length > 35 ? refStr.substring(0, 35) + '...' : refStr;
+  obs = `RET TRIB FED CONF IN 1234/2012 DA NF ${nfFull} - REF À ${refShort} - ${localStr} - ${npFull}`;
+  if (obs.length <= 200) return { obs, len: obs.length, truncated: false };
+
+  // Tentativa 3 — encurtar lista de NFs (primeiras 3 + contagem do restante)
+  const nfShort = nfs.length > 3
+    ? nfs.slice(0, 3).map(n => 'Nº ' + n).join(', ') + ` (+${nfs.length - 3})`
+    : nfFull;
+  obs = `RET TRIB FED CONF IN 1234/2012 DA NF ${nfShort} - REF À ${refShort} - ${localStr} - ${npFull}`;
+  if (obs.length <= 200) return { obs, len: obs.length, truncated: true };
+
+  // Tentativa 4 — encurtar lista de NPs (primeiro ao último)
+  const npShort = nps.length > 2 ? `${nps[0]} a ${nps[nps.length - 1]}` : npFull;
+  obs = `RET TRIB FED CONF IN 1234/2012 DA NF ${nfShort} - REF À ${refShort} - ${localStr} - ${npShort}`;
+  if (obs.length <= 200) return { obs, len: obs.length, truncated: true };
+
+  // Tentativa 5 — sem descrição, só NFs + local + NPs
+  obs = `RET TRIB FED CONF IN 1234/2012 DA NF ${nfShort} - ${localStr} - ${npShort}`;
+  return { obs: obs.substring(0, 200), len: obs.length, truncated: true };
+}
+
+// ─── PARSE DE DATA ───────────────────────────────────────────────────────────
+function parseDate(v) {
+  if (!v) return '';
+  if (v instanceof Date) return v.toLocaleDateString('pt-BR');
+  if (typeof v === 'number') {
+    const d = new Date((v - 25569) * 86400 * 1000);
+    return d.toLocaleDateString('pt-BR');
+  }
+  const s = String(v);
+  // formato ISO 2026-03-31
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  return s.substring(0, 10);
+}
+
+// ─── MAPEAMENTO DE COLUNAS ───────────────────────────────────────────────────
+function mapColumns(row) {
+  const map = {};
+  Object.keys(row).forEach(k => {
+    const n = k.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (n.includes('recolhedor'))                         map.cnpj = k;
+    if (n.includes('num') && n.includes('dh'))            map.num  = k;
+    if (n.includes('tipo') && n.includes('dh'))           map.tipo = k;
+    if (n.includes('natureza'))                           map.nat  = k;
+    if (n.includes('base') && n.includes('calculo'))      map.base = k;
+    if ((n.includes('valor') && n.includes('receita')) || (n.includes('valor rec'))) map.rec = k;
+    if (n.includes('observ'))                             map.obs  = k;
+    if (n.includes('periodo') || n.includes('apuracao'))  map.data = k;
+  });
+  return map;
+}
+
+// ─── PROCESSAMENTO PRINCIPAL ─────────────────────────────────────────────────
+function handleFile(file) {
+  if (!file) return;
+  if (!file.name.match(/\.xlsx?$/i)) {
+    setStatus('Selecione um arquivo .xlsx ou .xls válido.', 'err');
+    return;
+  }
+  setStatus('<span class="spinner"></span> Lendo e processando a planilha...', 'info');
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb   = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      originalData = rows;
+
+      if (!rows.length) { setStatus('Planilha vazia ou sem dados reconhecidos.', 'err'); return; }
+
+      const colMap = mapColumns(rows[0]);
+
+      if (!colMap.cnpj || !colMap.base) {
+        setStatus('Colunas não reconhecidas. Verifique se é a planilha DDF025 do SIAFI-Web.', 'err');
+        return;
+      }
+
+      // Filtra apenas linhas com número de DH preenchido (exclui linhas de subtotal)
+      const dataRows = rows.filter(r => {
+        const v = r[colMap.num];
+        return v !== '' && v !== null && v !== undefined;
+      });
+
+      if (!dataRows.length) { setStatus('Nenhuma linha de dados encontrada.', 'err'); return; }
+
+      mesRef = parseDate(dataRows[0][colMap.data]);
+
+      // Agrupa por CNPJ + Natureza de Rendimento
+      const groups = {};
+      dataRows.forEach(r => {
+        const cnpj = normCNPJ(r[colMap.cnpj]);
+        if (!cnpj) return;
+        const nat = String(r[colMap.nat] || '').trim();
+        const key = cnpj + '|' + nat;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push({
+          cnpj,
+          nat,
+          np:   r[colMap.num] ? String(Math.round(Number(r[colMap.num]))) : '',
+          base: parseFloat(r[colMap.base]) || 0,
+          rec:  parseFloat(r[colMap.rec])  || 0,
+          obs:  String(r[colMap.obs] || ''),
+          data: r[colMap.data] || ''
+        });
+      });
+
+      // Gera resultado por grupo
+      processedData = Object.values(groups).map(grp => {
+        const base = Math.round(grp.reduce((s, r) => s + r.base, 0) * 100) / 100;
+        const rec  = Math.round(grp.reduce((s, r) => s + r.rec,  0) * 100) / 100;
+        const { obs, len, truncated } = buildObs(grp);
+
+        // Coleta NFs e NPs para exibição auxiliar
+        const nfsList = grp.flatMap(r => extractNF(r.obs));
+        const npsList = grp.map(r => 'NP' + r.np);
+
+        return {
+          cnpj:     grp[0].cnpj,
+          nat:      grp[0].nat,
+          dataFG:   parseDate(grp[0].data),
+          base,
+          rec,
+          obs,
+          len,
+          truncated,
+          nfs:  nfsList.join(', '),
+          nps:  npsList.join(', '),
+          qtd:  grp.length
+        };
+      });
+
+      renderResult();
+    } catch (err) {
+      setStatus('Erro ao processar o arquivo: ' + err.message, 'err');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ─── RENDERIZAÇÃO ─────────────────────────────────────────────────────────────
+function renderResult() {
+  const data      = processedData;
+  const truncados = data.filter(r => r.truncated).length;
+  const totalBase = data.reduce((s, r) => s + r.base, 0);
+  const totalRec  = data.reduce((s, r) => s + r.rec,  0);
+  const totalNotas = data.reduce((s, r) => s + r.qtd, 0);
+
+  document.getElementById('cards-grid').innerHTML = `
+    <div class="card-resumo">
+      <div class="lbl">CNPJs para lançar</div>
+      <div class="val">${data.length}</div>
+      <div class="sub">registros no REINF</div>
+    </div>
+    <div class="card-resumo">
+      <div class="lbl">Total base de cálculo</div>
+      <div class="val" style="font-size:1.05rem">${fmtMoeda(totalBase)}</div>
+      <div class="sub">valor bruto somado</div>
+    </div>
+    <div class="card-resumo">
+      <div class="lbl">Total retenção</div>
+      <div class="val" style="font-size:1.05rem">${fmtMoeda(totalRec)}</div>
+      <div class="sub">valor receita somado</div>
+    </div>
+    <div class="card-resumo ${truncados > 0 ? 'warn' : ''}">
+      <div class="lbl">Obs. para revisar</div>
+      <div class="val">${truncados}</div>
+      <div class="sub">${truncados > 0 ? 'verifique em amarelo' : 'todas ok ✓'}</div>
+    </div>
+  `;
+
+  document.getElementById('tbl-sub').textContent =
+    `Mês de referência: ${mesRef} · ${data.length} CNPJs · ${totalNotas} notas fiscais agrupadas`;
+
+  const tbody = document.getElementById('result-body');
+  tbody.innerHTML = data.map(r => {
+    const pct  = Math.min(100, Math.round((r.len / 200) * 100));
+    const over = r.len > 200;
+    return `
+      <tr class="${r.truncated ? 'warn-row' : ''}">
+        <td class="cnpj-cell">${maskCNPJ(r.cnpj)}</td>
+        <td class="nat-cell">${r.nat}</td>
+        <td style="font-size:0.78rem;white-space:nowrap">${r.dataFG}</td>
+        <td class="money-cell">${fmtMoeda(r.base)}</td>
+        <td class="money-cell">${fmtMoeda(r.rec)}</td>
+        <td>
+          <div class="obs-text">${r.obs}</div>
+          <div class="obs-meta">NFs: ${r.nfs || '—'} &nbsp;|&nbsp; ${r.nps}</div>
+          <div class="char-bar"><div class="char-fill ${over ? 'over' : ''}" style="width:${pct}%"></div></div>
+        </td>
+        <td style="text-align:center;font-family:'IBM Plex Mono',monospace;font-size:0.78rem">${r.len}</td>
+        <td style="text-align:center">
+          <span class="badge ${r.truncated ? 'badge-warn' : 'badge-ok'}">${r.truncated ? '⚠ Revisar' : '✓ OK'}</span>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  document.getElementById('sec-upload').style.display = 'none';
+  document.getElementById('sec-result').style.display = 'block';
+
+  const msg = truncados > 0
+    ? `✓ Concluído. ${data.length} CNPJs agrupados. ${truncados} observação(ões) encurtadas (amarelo) — revise antes de lançar.`
+    : `✓ Concluído. ${data.length} CNPJs agrupados. Todas as observações dentro do limite de 200 caracteres.`;
+  setStatus(msg, 'ok');
+}
+
+// ─── DOWNLOAD ────────────────────────────────────────────────────────────────
+function downloadResult() {
+  if (!processedData.length) return;
+  const wb2 = XLSX.utils.book_new();
+
+  const wsData = [
+    ['CNPJ', 'Natureza de Rendimento', 'Data Fato Gerador', 'Valor Bruto (Base de Cálculo)',
+     'Valor da Receita (Retenção)', 'Observação REINF', 'Qtd Chars', 'Status',
+     'NFs Incluídas', 'NPs Incluídas', 'Qtd Notas Agrupadas'],
+    ...processedData.map(r => [
+      maskCNPJ(r.cnpj), r.nat, r.dataFG,
+      r.base, r.rec,
+      r.obs, r.len,
+      r.truncated ? 'Revisar' : 'OK',
+      r.nfs, r.nps, r.qtd
+    ])
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [20, 14, 13, 20, 20, 65, 8, 10, 40, 35, 10].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb2, ws, 'RESULTADO REINF');
+
+  if (originalData.length) {
+    const ws2 = XLSX.utils.json_to_sheet(originalData);
+    XLSX.utils.book_append_sheet(wb2, ws2, 'DADOS ORIGINAIS');
+  }
+
+  const hoje = new Date().toLocaleDateString('pt-BR').replace(/\//g, '_');
+  XLSX.writeFile(wb2, `REINF_Processado_${hoje}.xlsx`);
+}
+
+// ─── RESET ───────────────────────────────────────────────────────────────────
+function resetApp() {
+  processedData = [];
+  originalData  = [];
+  mesRef = '';
+  fileInput.value = '';
+  document.getElementById('sec-result').style.display = 'none';
+  document.getElementById('sec-upload').style.display = 'block';
+  statusEl.style.display = 'none';
+}
+</script>
+</body>
+</html>
